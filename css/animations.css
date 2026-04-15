@@ -1,0 +1,206 @@
+/* ================================================
+   MediScan AI — Animations
+   ================================================ */
+
+/* Keyframes */
+@keyframes pulseRing {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.5); opacity: 0; }
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(60px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes scanMove {
+    0% { top: 10%; }
+    50% { top: 85%; }
+    100% { top: 10%; }
+}
+
+@keyframes voiceWave {
+    0% { height: 8px; }
+    100% { height: 28px; }
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+}
+
+@keyframes glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(var(--accent-primary-rgb), 0.2); }
+    50% { box-shadow: 0 0 40px rgba(var(--accent-primary-rgb), 0.4); }
+}
+
+@keyframes countUp {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes borderGlow {
+    0%, 100% { border-color: rgba(var(--accent-primary-rgb), 0.2); }
+    50% { border-color: rgba(var(--accent-primary-rgb), 0.5); }
+}
+
+/* Utility Classes */
+.pulse { animation: pulse 2s infinite; }
+.float { animation: float 3s ease-in-out infinite; }
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+/* Loading skeleton */
+.skeleton {
+    background: linear-gradient(90deg, var(--glass-bg) 25%, var(--glass-bg-hover) 50%, var(--glass-bg) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: var(--radius-sm);
+}
+
+/* Page transition */
+.page-enter {
+    animation: fadeInUp 0.4s ease forwards;
+}
+
+/* Stagger children animation */
+.stagger-children > * {
+    opacity: 0;
+    animation: fadeInUp 0.4s ease forwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
+
+/* Scanning Animation Overlay */
+.scanning-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 5000;
+    backdrop-filter: blur(5px);
+}
+
+.scanning-animation {
+    width: 120px;
+    height: 120px;
+    position: relative;
+    margin-bottom: 24px;
+}
+
+.scanning-animation .ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-top-color: var(--accent-primary);
+    animation: spin 1s linear infinite;
+}
+
+.scanning-animation .ring:nth-child(2) {
+    width: 80%;
+    height: 80%;
+    top: 10%;
+    left: 10%;
+    border-top-color: var(--accent-secondary);
+    animation-direction: reverse;
+    animation-duration: 0.8s;
+}
+
+.scanning-animation .ring:nth-child(3) {
+    width: 60%;
+    height: 60%;
+    top: 20%;
+    left: 20%;
+    border-top-color: var(--accent-green);
+    animation-duration: 0.6s;
+}
+
+.scanning-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.scanning-sub {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+/* Gauge color classes */
+.gauge-green { stroke: var(--accent-green); }
+.gauge-yellow { stroke: var(--accent-yellow); }
+.gauge-orange { stroke: #ff9500; }
+.gauge-red { stroke: var(--accent-red); }
+
+/* Typing indicator */
+.typing-indicator {
+    display: flex;
+    gap: 4px;
+    padding: 8px 0;
+}
+
+.typing-indicator span {
+    width: 8px;
+    height: 8px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    animation: typingBounce 1.2s infinite;
+}
+
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+}
+
+/* Smooth appearance for results */
+.result-appear {
+    animation: fadeInUp 0.5s ease forwards;
+}
+
+.result-appear:nth-child(2) { animation-delay: 0.1s; }
+.result-appear:nth-child(3) { animation-delay: 0.2s; }
+.result-appear:nth-child(4) { animation-delay: 0.3s; }

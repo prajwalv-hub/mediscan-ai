@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediScan AI — AI-Powered Medical Diagnostics</title>
+    <meta name="description" content="AI-powered medical diagnostic platform with real-time camera scanning, voice input, multi-language support, and blood donor network.">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+    <!-- API Key Modal (shows on first visit) -->
+    <div class="modal-overlay" id="apiKeyModal" style="display:none;">
+        <div class="modal-card">
+            <div class="modal-icon">🔑</div>
+            <h2>Welcome to MediScan AI</h2>
+            <p>Enter your Google Gemini API key to get started.</p>
+            <div class="input-group">
+                <input type="password" id="apiKeyInput" placeholder="Paste your Gemini API key here..." class="input-field">
+            </div>
+            <p class="text-small text-muted">Your key is stored locally and never sent anywhere except Google's API.</p>
+            <button class="btn btn-primary btn-full" onclick="saveApiKey()">
+                <span>Get Started</span>
+                <span class="btn-icon">→</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Disclaimer Modal -->
+    <div class="modal-overlay" id="disclaimerModal" style="display:none;">
+        <div class="modal-card">
+            <div class="modal-icon">⚕️</div>
+            <h2>Medical Disclaimer</h2>
+            <p>MediScan AI provides <strong>preliminary health screening only</strong>. This is <strong>NOT</strong> a medical diagnosis. Always consult a qualified healthcare professional for medical advice.</p>
+            <p class="text-small text-muted mt-10">By continuing, you acknowledge this is a demonstration tool built for educational purposes.</p>
+            <button class="btn btn-primary btn-full mt-20" onclick="acceptDisclaimer()">
+                <span>I Understand</span>
+                <span class="btn-icon">✓</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-logo">
+            <div class="pulse-ring"></div>
+            <span class="loading-icon">🏥</span>
+        </div>
+        <h2 class="loading-text">MediScan AI</h2>
+        <p class="loading-sub">Initializing AI Diagnostics...</p>
+        <div class="loading-bar">
+            <div class="loading-bar-fill" id="loadingBarFill"></div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div class="app-container" id="appContainer" style="display:none;">
+        
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">🏥</div>
+                    <span class="logo-text">MediScan<span class="text-accent">AI</span></span>
+                </div>
+            </div>
+
+            <div class="nav-links">
+                <a href="#" class="nav-link active" data-page="home" onclick="navigateTo('home')">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">Home</span>
+                </a>
+                <a href="#" class="nav-link" data-page="scanner" onclick="navigateTo('scanner')">
+                    <span class="nav-icon">🔬</span>
+                    <span class="nav-label">AI Scanner</span>
+                </a>
+                <a href="#" class="nav-link" data-page="symptoms" onclick="navigateTo('symptoms')">
+                    <span class="nav-icon">🩺</span>
+                    <span class="nav-label">Symptoms</span>
+                </a>
+                <a href="#" class="nav-link" data-page="report-analyzer" onclick="navigateTo('report-analyzer')">
+                    <span class="nav-icon">📑</span>
+                    <span class="nav-label">Report Analyzer</span>
+                </a>
+                <a href="#" class="nav-link" data-page="chat" onclick="navigateTo('chat')">
+                    <span class="nav-icon">💬</span>
+                    <span class="nav-label">AI Doctor</span>
+                </a>
+                <a href="#" class="nav-link" data-page="bloodbank" onclick="navigateTo('bloodbank')">
+                    <span class="nav-icon">🩸</span>
+                    <span class="nav-label">Blood Bank</span>
+                </a>
+                <a href="#" class="nav-link" data-page="history" onclick="navigateTo('history')">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">History</span>
+                </a>
+            </div>
+
+            <div class="sidebar-footer">
+                <!-- Language Selector -->
+                <div class="language-selector">
+                    <span class="nav-icon">🌍</span>
+                    <select id="languageSelect" class="lang-select" onchange="changeLanguage(this.value)">
+                        <option value="en">English</option>
+                        <option value="hi">हिन्दी</option>
+                        <option value="te">తెలుగు</option>
+                        <option value="ta">தமிழ்</option>
+                        <option value="kn">ಕನ್ನಡ</option>
+                        <option value="mr">मराठी</option>
+                    </select>
+                </div>
+                <!-- Accessibility Controls -->
+                <div class="accessibility-controls">
+                    <button class="icon-btn" id="ttsToggle" title="Text-to-Speech" onclick="toggleTTS()">🔊</button>
+                    <button class="icon-btn" id="contrastToggle" title="High Contrast" onclick="toggleContrast()">🌓</button>
+                    <button class="icon-btn" id="textSizeToggle" title="Large Text" onclick="toggleTextSize()">🔤</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Mobile Bottom Navigation -->
+        <nav class="mobile-nav" id="mobileNav">
+            <a href="#" class="mobile-nav-item active" data-page="home" onclick="navigateTo('home')">
+                <span>🏠</span><small>Home</small>
+            </a>
+            <a href="#" class="mobile-nav-item" data-page="scanner" onclick="navigateTo('scanner')">
+                <span>🔬</span><small>Scan</small>
+            </a>
+            <a href="#" class="mobile-nav-item" data-page="symptoms" onclick="navigateTo('symptoms')">
+                <span>🩺</span><small>Symptoms</small>
+            </a>
+            <a href="#" class="mobile-nav-item" data-page="chat" onclick="navigateTo('chat')">
+                <span>💬</span><small>Chat</small>
+            </a>
+            <a href="#" class="mobile-nav-item" data-page="bloodbank" onclick="navigateTo('bloodbank')">
+                <span>🩸</span><small>Blood</small>
+            </a>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content" id="mainContent">
+
+            <!-- ==================== HOME PAGE ==================== -->
+            <section class="page active" id="page-home">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Welcome to <span class="gradient-text">MediScan AI</span></h1>
+                        <p class="page-subtitle">AI-powered medical diagnostics in your language, at your fingertips.</p>
+                    </div>
+                </div>
+
+                <!-- Hero Stats -->
+                <div class="stats-row">
+                    <div class="stat-card glass-card">
+                        <span class="stat-icon">🔬</span>
+                        <div class="stat-number" id="totalScans">0</div>
+                        <div class="stat-label">Scans Done</div>
+                    </div>
+                    <div class="stat-card glass-card">
+                        <span class="stat-icon">📊</span>
+                        <div class="stat-number" id="avgScore">--</div>
+                        <div class="stat-label">Avg Health Score</div>
+                    </div>
+                    <div class="stat-card glass-card">
+                        <span class="stat-icon">🩸</span>
+                        <div class="stat-number" id="donorCount">24</div>
+                        <div class="stat-label">Donors Nearby</div>
+                    </div>
+                    <div class="stat-card glass-card">
+                        <span class="stat-icon">🌍</span>
+                        <div class="stat-number" id="langCount">6</div>
+                        <div class="stat-label">Languages</div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <h2 class="section-title">Quick Actions</h2>
+                <div class="action-grid">
+                    <div class="action-card" onclick="navigateTo('scanner')">
+                        <div class="action-icon-wrap gradient-bg-1">
+                            <span class="action-icon">📸</span>
+                        </div>
+                        <h3>Camera Scan</h3>
+                        <p>Scan skin conditions using your camera in real-time</p>
+                        <span class="action-arrow">→</span>
+                    </div>
+                    <div class="action-card" onclick="navigateTo('symptoms')">
+                        <div class="action-icon-wrap gradient-bg-2">
+                            <span class="action-icon">🗣️</span>
+                        </div>
+                        <h3>Voice Symptoms</h3>
+                        <p>Describe your symptoms by speaking — in any language</p>
+                        <span class="action-arrow">→</span>
+                    </div>
+                    <div class="action-card" onclick="navigateTo('report-analyzer')">
+                        <div class="action-icon-wrap gradient-bg-3">
+                            <span class="action-icon">📑</span>
+                        </div>
+                        <h3>Report Analyzer</h3>
+                        <p>Upload medical reports for AI insights & lifestyle tips</p>
+                        <span class="action-arrow">→</span>
+                    </div>
+                    <div class="action-card" onclick="navigateTo('chat')">
+                        <div class="action-icon-wrap gradient-bg-4">
+                            <span class="action-icon">💬</span>
+                        </div>
+                        <h3>AI Doctor Chat</h3>
+                        <p>Ask health questions and get instant AI guidance</p>
+                        <span class="action-arrow">→</span>
+                    </div>
+                    <div class="action-card" onclick="navigateTo('bloodbank')">
+                        <div class="action-icon-wrap gradient-bg-5">
+                            <span class="action-icon">🩸</span>
+                        </div>
+                        <h3>Blood Donor Map</h3>
+                        <p>Find nearby blood donors or register as one</p>
+                        <span class="action-arrow">→</span>
+                    </div>
+                    <div class="action-card" onclick="navigateTo('scanner')">
+                        <div class="action-icon-wrap gradient-bg-6">
+                            <span class="action-icon">📄</span>
+                        </div>
+                        <h3>Upload Image</h3>
+                        <p>Upload a medical image for AI analysis</p>
+                        <span class="action-arrow">→</span>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <h2 class="section-title">Recent Activity</h2>
+                <div class="recent-activity" id="recentActivity">
+                    <div class="empty-state">
+                        <span class="empty-icon">📋</span>
+                        <p>No scans yet. Start your first scan above!</p>
+                    </div>
+                </div>
+
+                <!-- Medical Disclaimer -->
+                <div class="disclaimer-bar">
+                    <span>⚕️</span>
+                    <p>MediScan AI provides preliminary screening only. This is NOT a medical diagnosis. Always consult a qualified healthcare professional.</p>
+                </div>
+            </section>
+
+            <!-- ==================== SCANNER PAGE ==================== -->
+            <section class="page" id="page-scanner">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">🔬 AI Medical <span class="gradient-text">Scanner</span></h1>
+                        <p class="page-subtitle">Upload an image or use your camera for AI-powered analysis</p>
+                    </div>
+                </div>
+
+                <div class="scanner-layout">
+                    <!-- Input Section -->
+                    <div class="scanner-input">
+                        <!-- Tab Switcher -->
+                        <div class="tab-switcher">
+                            <button class="tab-btn active" data-tab="upload" onclick="switchScannerTab('upload')">📁 Upload Image</button>
+                            <button class="tab-btn" data-tab="camera" onclick="switchScannerTab('camera')">📸 Live Camera</button>
+                        </div>
+
+                        <!-- Upload Tab -->
+                        <div class="tab-content active" id="tab-upload">
+                            <div class="upload-area" id="uploadArea" onclick="document.getElementById('imageInput').click()">
+                                <div class="upload-icon pulse">📤</div>
+                                <h3>Drag & drop medical image here</h3>
+                                <p>or click to browse files</p>
+                                <p class="text-small text-muted mt-10">Supports: JPG, PNG, WebP • Max 10MB</p>
+                                <input type="file" id="imageInput" accept="image/*" hidden onchange="handleImageUpload(event)">
+                            </div>
+                            <div class="image-preview-container" id="imagePreviewContainer" style="display:none;">
+                                <img id="imagePreview" class="image-preview" alt="Preview">
+                                <button class="btn btn-ghost btn-small" onclick="clearImage()">✕ Remove</button>
+                            </div>
+                        </div>
+
+                        <!-- Camera Tab -->
+                        <div class="tab-content" id="tab-camera">
+                            <div class="camera-container" id="cameraContainer">
+                                <video id="cameraFeed" autoplay playsinline class="camera-feed"></video>
+                                <canvas id="cameraCanvas" style="display:none;"></canvas>
+                                <div class="camera-overlay">
+                                    <div class="scan-line"></div>
+                                    <div class="corner-markers">
+                                        <div class="corner tl"></div>
+                                        <div class="corner tr"></div>
+                                        <div class="corner bl"></div>
+                                        <div class="corner br"></div>
+                                    </div>
+                                </div>
+                                <div class="camera-controls">
+                                    <button class="camera-btn" id="startCameraBtn" onclick="startCamera()">Start Camera</button>
+                                    <button class="camera-btn capture" id="captureBtn" onclick="captureImage()" style="display:none;">📸 Capture</button>
+                                    <button class="camera-btn" id="switchCameraBtn" onclick="switchCamera()" style="display:none;">🔄 Switch</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Optional: Add symptoms for cross-validation -->
+                        <div class="cross-validation-input mt-20">
+                            <h3>📝 Add symptoms for better accuracy <span class="badge badge-cyan">Optional</span></h3>
+                            <div class="input-with-mic">
+                                <textarea id="scannerSymptoms" class="textarea-field" placeholder="Describe any symptoms... (e.g., itchy, red, spreading for 3 days)" rows="3"></textarea>
+                                <button class="mic-btn" id="scannerMicBtn" onclick="startVoiceInput('scannerSymptoms')">🎤</button>
+                            </div>
+                        </div>
+
+                        <!-- Analyze Button -->
+                        <button class="btn btn-primary btn-full mt-20" id="analyzeBtn" onclick="analyzeImage()" disabled>
+                            <span class="btn-loader" id="analyzeBtnLoader" style="display:none;"></span>
+                            <span id="analyzeBtnText">🧬 Analyze with AI</span>
+                        </button>
+                    </div>
+
+                    <!-- Results Section -->
+                    <div class="scanner-results" id="scannerResults" style="display:none;">
+                        <div class="results-header">
+                            <h2>📊 Analysis Results</h2>
+                            <div class="results-actions">
+                                <button class="btn btn-ghost btn-small" onclick="speakResults()">🔊 Read Aloud</button>
+                                <button class="btn btn-ghost btn-small" onclick="downloadReport()">📄 Download PDF</button>
+                            </div>
+                        </div>
+
+                        <!-- Health Score Gauge -->
+                        <div class="health-gauge-container">
+                            <div class="health-gauge" id="healthGauge">
+                                <svg viewBox="0 0 200 200" class="gauge-svg">
+                                    <circle cx="100" cy="100" r="85" class="gauge-bg"></circle>
+                                    <circle cx="100" cy="100" r="85" class="gauge-fill" id="gaugeFill"></circle>
+                                </svg>
+                                <div class="gauge-value">
+                                    <span class="gauge-number" id="gaugeNumber">--</span>
+                                    <span class="gauge-label">Health Score</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Diagnosis Card -->
+                        <div class="result-card glass-card" id="diagnosisCard">
+                            <div class="result-card-header">
+                                <h3>🩺 Diagnosis</h3>
+                                <span class="severity-badge" id="severityBadge">--</span>
+                            </div>
+                            <div class="diagnosis-name" id="diagnosisName">--</div>
+                            <div class="confidence-bar-container">
+                                <div class="confidence-label">
+                                    <span>Confidence</span>
+                                    <span id="confidenceValue">--%</span>
+                                </div>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" id="confidenceFill"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Observations -->
+                        <div class="result-card glass-card" id="observationsCard">
+                            <h3>🔍 Key Observations</h3>
+                            <ul class="result-list" id="observationsList"></ul>
+                        </div>
+
+                        <!-- Recommendations -->
+                        <div class="result-card glass-card" id="recommendationsCard">
+                            <h3>💡 Recommendations</h3>
+                            <ul class="result-list" id="recommendationsList"></ul>
+                        </div>
+
+                        <!-- Cross-Validation (if symptoms provided) -->
+                        <div class="result-card glass-card" id="crossValidationCard" style="display:none;">
+                            <h3>🧬 Cross-Validation</h3>
+                            <p id="crossValidationText"></p>
+                        </div>
+
+                        <!-- Emergency Alert (hidden by default) -->
+                        <div class="emergency-alert" id="emergencyAlert" style="display:none;">
+                            <div class="emergency-header">
+                                <span class="emergency-icon pulse">🚨</span>
+                                <h3>Emergency Detected</h3>
+                            </div>
+                            <p id="emergencyText">Critical condition detected. Seek immediate medical attention.</p>
+                            <div class="emergency-actions">
+                                <a href="tel:112" class="btn btn-danger">📞 Call 112 (Emergency)</a>
+                                <button class="btn btn-warning" onclick="shareLocation()">📍 Share Location</button>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="result-actions mt-20">
+                            <button class="btn btn-primary" onclick="navigateTo('chat')">💬 Ask AI Doctor</button>
+                            <button class="btn btn-secondary" onclick="newScan()">🔄 New Scan</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SYMPTOMS PAGE ==================== -->
+            <section class="page" id="page-symptoms">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">🩺 Symptom <span class="gradient-text">Checker</span></h1>
+                        <p class="page-subtitle">Describe your symptoms by typing or speaking — in any language</p>
+                    </div>
+                </div>
+
+                <div class="symptoms-layout">
+                    <div class="symptoms-input-section">
+                        <!-- Voice Input -->
+                        <div class="voice-input-area glass-card">
+                            <div class="voice-btn-container">
+                                <button class="voice-record-btn" id="voiceRecordBtn" onclick="toggleVoiceRecording()">
+                                    <span class="voice-icon" id="voiceIcon">🎤</span>
+                                    <div class="voice-waves" id="voiceWaves" style="display:none;">
+                                        <span></span><span></span><span></span><span></span><span></span>
+                                    </div>
+                                </button>
+                                <p class="voice-status" id="voiceStatus">Tap to speak your symptoms</p>
+                            </div>
+                            <p class="text-small text-muted">Supports: English, Hindi, Telugu, Tamil & more</p>
+                        </div>
+
+                        <!-- Text Input -->
+                        <div class="mt-20">
+                            <h3>Or type your symptoms:</h3>
+                            <textarea id="symptomsInput" class="textarea-field" rows="4" placeholder="E.g., I have a headache for 2 days, mild fever, and sore throat..."></textarea>
+                        </div>
+
+                        <!-- Common Symptom Tags -->
+                        <div class="symptom-tags mt-20">
+                            <h3>Common symptoms:</h3>
+                            <div class="tags-container">
+                                <button class="tag-btn" onclick="addSymptomTag(this)">🤕 Headache</button>
+                                <button class="tag-btn" onclick="addSymptomTag(this)">🤒 Fever</button>
+                                <button class="tag-btn" onclick="addSymptomTag(this)">😷 Cough</button>
+                                <button class="tag-btn" onclick="addSymptomTag(this)">🤧 Cold</button>
+                                <button class="tag-btn" onclick="addSymptomTag(this)">😵 Dizziness</button>
+                                <button class="tag-btn" onclick="addSymptomTag(this)">🤢 Nausea</button>
+                                <button class="tag-btn" onclick="addSymptomTag(this)">💪 Body Pain</button>
+                                <button class="tag-btn" onclick="addSymptomTag(this)">😫 Fatigue</button>
+                                <button class="tag-btn" onclick="addSymptomTag(this)">🩹 Skin Rash</button>
+                                <button class="tag-btn" onclick="addSymptomTag(this)">😮‍💨 Breathlessness</button>
+                                <button class="tag-btn" onclick="addSymptomTag(this)">🫁 Chest Pain</button>
+                                <button class="tag-btn" onclick="addSymptomTag(this)">🦵 Joint Pain</button>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary btn-full mt-20" id="symptomAnalyzeBtn" onclick="analyzeSymptoms()">
+                            <span class="btn-loader" id="symptomBtnLoader" style="display:none;"></span>
+                            <span id="symptomBtnText">🧬 Analyze Symptoms</span>
+                        </button>
+                    </div>
+
+                    <!-- Symptom Results -->
+                    <div class="symptoms-results" id="symptomsResults" style="display:none;">
+                        <div class="results-header">
+                            <h2>📊 Symptom Analysis</h2>
+                            <div class="results-actions">
+                                <button class="btn btn-ghost btn-small" onclick="speakSymptomResults()">🔊 Read Aloud</button>
+                                <button class="btn btn-ghost btn-small" onclick="downloadSymptomReport()">📄 PDF</button>
+                            </div>
+                        </div>
+
+                        <!-- Possible Conditions -->
+                        <div class="conditions-list" id="conditionsList"></div>
+
+                        <!-- Red Flags -->
+                        <div class="result-card glass-card" id="redFlagsCard" style="display:none;">
+                            <h3 style="color: var(--accent-red);">🚩 Red Flags to Watch</h3>
+                            <ul class="result-list red-list" id="redFlagsList"></ul>
+                        </div>
+
+                        <!-- Recommendations -->
+                        <div class="result-card glass-card" id="symptomRecsCard">
+                            <h3>💡 Recommendations</h3>
+                            <ul class="result-list" id="symptomRecsList"></ul>
+                        </div>
+
+                        <div class="result-actions mt-20">
+                            <button class="btn btn-primary" onclick="navigateTo('chat')">💬 Ask AI Doctor</button>
+                            <button class="btn btn-secondary" onclick="newSymptomCheck()">🔄 New Check</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== REPORT ANALYZER PAGE ==================== -->
+            <section class="page" id="page-report-analyzer">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">📑 Report <span class="gradient-text">Analyzer</span></h1>
+                        <p class="page-subtitle">Upload your medical reports for AI insights & lifestyle recommendations</p>
+                    </div>
+                </div>
+
+                <div class="scanner-layout">
+                    <div class="scanner-input">
+                        <div class="upload-area" id="reportUploadArea" onclick="document.getElementById('reportInput').click()">
+                            <div class="upload-icon pulse">📄</div>
+                            <h3>Upload medical report</h3>
+                            <p>Blood test, X-ray report, prescription, lab results...</p>
+                            <p class="text-small text-muted mt-10">Supports: JPG, PNG, PDF screenshot</p>
+                            <input type="file" id="reportInput" accept="image/*" hidden onchange="handleReportUpload(event)">
+                        </div>
+                        <div class="image-preview-container" id="reportPreviewContainer" style="display:none;">
+                            <img id="reportPreview" class="image-preview" alt="Report Preview">
+                            <button class="btn btn-ghost btn-small" onclick="clearReport()">✕ Remove</button>
+                        </div>
+
+                        <button class="btn btn-primary btn-full mt-20" id="reportAnalyzeBtn" onclick="analyzeReport()" disabled>
+                            <span class="btn-loader" id="reportBtnLoader" style="display:none;"></span>
+                            <span id="reportBtnText">📑 Analyze Report</span>
+                        </button>
+                    </div>
+
+                    <div class="scanner-results" id="reportResults" style="display:none;">
+                        <div class="results-header">
+                            <h2>📊 Report Analysis</h2>
+                            <button class="btn btn-ghost btn-small" onclick="speakReportResults()">🔊 Read</button>
+                        </div>
+
+                        <!-- Report Summary -->
+                        <div class="result-card glass-card" id="reportSummaryCard">
+                            <h3>📋 Report Summary</h3>
+                            <div id="reportSummaryContent"></div>
+                        </div>
+
+                        <!-- Key Values -->
+                        <div class="result-card glass-card" id="reportValuesCard">
+                            <h3>🔢 Key Values Detected</h3>
+                            <div class="values-grid" id="reportValuesGrid"></div>
+                        </div>
+
+                        <!-- Lifestyle Recommendations -->
+                        <div class="result-card glass-card lifestyle-card" id="lifestyleCard">
+                            <h3>🏃 Lifestyle Recommendations</h3>
+                            <div class="lifestyle-grid" id="lifestyleGrid"></div>
+                        </div>
+
+                        <div class="result-actions mt-20">
+                            <button class="btn btn-primary" onclick="navigateTo('chat')">💬 Ask AI Doctor</button>
+                            <button class="btn btn-secondary" onclick="downloadReportPDF()">📄 Download PDF</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== AI DOCTOR CHAT PAGE ==================== -->
+            <section class="page" id="page-chat">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">💬 AI Doctor <span class="gradient-text">Chat</span></h1>
+                        <p class="page-subtitle">Ask follow-up questions about your health — in any language</p>
+                    </div>
+                </div>
+
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-bubble ai">
+                            <div class="chat-avatar">🤖</div>
+                            <div class="chat-content">
+                                <p>Hello! I'm your AI Health Assistant. I can answer questions about health conditions, medications, lifestyle, and more.</p>
+                                <p class="mt-10">How can I help you today?</p>
+                                <span class="chat-time">Just now</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-input-area">
+                        <div class="chat-suggestions" id="chatSuggestions">
+                            <button class="suggestion-btn" onclick="sendSuggestion(this)">What should I eat for anemia?</button>
+                            <button class="suggestion-btn" onclick="sendSuggestion(this)">Is my condition contagious?</button>
+                            <button class="suggestion-btn" onclick="sendSuggestion(this)">When should I see a doctor?</button>
+                        </div>
+                        <div class="chat-input-row">
+                            <button class="mic-btn" id="chatMicBtn" onclick="startVoiceInput('chatInput')">🎤</button>
+                            <input type="text" id="chatInput" class="chat-input" placeholder="Type your question..." onkeypress="if(event.key==='Enter')sendChatMessage()">
+                            <button class="send-btn" onclick="sendChatMessage()">
+                                <span>➤</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== BLOOD BANK PAGE ==================== -->
+            <section class="page" id="page-bloodbank">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">🩸 Blood Donor <span class="gradient-text">Network</span></h1>
+                        <p class="page-subtitle">Find nearby blood donors or register to save lives</p>
+                    </div>
+                </div>
+
+                <div class="bloodbank-layout">
+                    <!-- Map Section -->
+                    <div class="map-section">
+                        <div class="map-controls glass-card">
+                            <div class="blood-group-filter">
+                                <label>Filter by blood group:</label>
+                                <div class="blood-group-btns">
+                                    <button class="blood-btn active" onclick="filterDonors('all')">All</button>
+                                    <button class="blood-btn" onclick="filterDonors('A+')">A+</button>
+                                    <button class="blood-btn" onclick="filterDonors('A-')">A-</button>
+                                    <button class="blood-btn" onclick="filterDonors('B+')">B+</button>
+                                    <button class="blood-btn" onclick="filterDonors('B-')">B-</button>
+                                    <button class="blood-btn" onclick="filterDonors('AB+')">AB+</button>
+                                    <button class="blood-btn" onclick="filterDonors('AB-')">AB-</button>
+                                    <button class="blood-btn" onclick="filterDonors('O+')">O+</button>
+                                    <button class="blood-btn" onclick="filterDonors('O-')">O-</button>
+                                </div>
+                            </div>
+                            <button class="btn btn-danger btn-small" onclick="requestBlood()">🚨 Request Blood</button>
+                        </div>
+                        <div id="donorMap" class="donor-map"></div>
+                    </div>
+
+                    <!-- Donor Registration -->
+                    <div class="donor-registration glass-card">
+                        <h3>🤝 Register as Donor</h3>
+                        <p class="text-muted mb-20">Help save lives by registering as a blood donor. Your approximate location will be shown on the map (not exact address).</p>
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" id="donorName" class="input-field" placeholder="Your name">
+                        </div>
+                        <div class="form-group">
+                            <label>Blood Group</label>
+                            <select id="donorBloodGroup" class="input-field">
+                                <option value="">Select blood group</option>
+                                <option value="A+">A+</option>
+                                <option value="A-">A-</option>
+                                <option value="B+">B+</option>
+                                <option value="B-">B-</option>
+                                <option value="AB+">AB+</option>
+                                <option value="AB-">AB-</option>
+                                <option value="O+">O+</option>
+                                <option value="O-">O-</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Phone Number</label>
+                            <input type="tel" id="donorPhone" class="input-field" placeholder="+91 XXXXX XXXXX">
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="donorConsent">
+                            <label for="donorConsent">I voluntarily consent to be listed as a donor. I can opt out anytime.</label>
+                        </div>
+                        <button class="btn btn-primary btn-full" onclick="registerDonor()">🩸 Register as Donor</button>
+                    </div>
+
+                    <!-- Donor List -->
+                    <div class="donor-list-section">
+                        <h3>Nearby Donors</h3>
+                        <div class="donor-list" id="donorList"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== HISTORY PAGE ==================== -->
+            <section class="page" id="page-history">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">📊 Scan <span class="gradient-text">History</span></h1>
+                        <p class="page-subtitle">View all your past scans and analyses</p>
+                    </div>
+                    <button class="btn btn-ghost" onclick="clearHistory()">🗑️ Clear All</button>
+                </div>
+
+                <div class="history-list" id="historyList">
+                    <div class="empty-state">
+                        <span class="empty-icon">📋</span>
+                        <p>No history yet. Complete a scan to see it here.</p>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/gemini.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/voice.js"></script>
+    <script src="js/scanner.js"></script>
+    <script src="js/symptoms.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/report.js"></script>
+    <script src="js/bloodbank.js"></script>
+    <script src="js/accessibility.js"></script>
+    <script src="js/storage.js"></script>
+</body>
+</html>
