@@ -15,10 +15,26 @@ function initSpeechRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return null;
     const r = new SR();
-    r.continuous = true;
-    r.interimResults = true;
+    
+    // Mobile detection
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    
+    // On mobile: non-continuous to prevent duplicate word stacking
+    // On desktop: continuous for a smooth experience
+    r.continuous = !isMobile;
+    r.interimResults = !isMobile;
     r.maxAlternatives = 1;
     r.lang = CONFIG.LANGUAGES[CONFIG.currentLanguage]?.speechCode || 'en-US';
+
+    // Track what was in the field before this session started
+    let baseText = '';
+
+    r.onstart = () => {
+        if (activeInputId) {
+            const inp = document.getElementById(activeInputId);
+            baseText = inp ? inp.value : '';
+        }
+    };
 
     r.onresult = (e) => {
         let final = '', interim = '';
@@ -30,7 +46,15 @@ function initSpeechRecognition() {
         if (interim && status) status.textContent = '"' + interim.substring(0, 50) + '..."';
         if (final && activeInputId) {
             const inp = document.getElementById(activeInputId);
-            if (inp) { inp.value += (inp.value ? ' ' : '') + final; gotResult = true; }
+            if (inp) {
+                // On mobile: replace with base + new result (no stacking)
+                if (isMobile) {
+                    inp.value = (baseText ? baseText + ' ' : '') + final.trim();
+                } else {
+                    inp.value += (inp.value ? ' ' : '') + final;
+                }
+                gotResult = true;
+            }
             showToast('Got: "' + final.substring(0, 40) + '"', 'success');
         }
     };
@@ -41,7 +65,14 @@ function initSpeechRecognition() {
         else if (e.error !== 'aborted') showToast('Voice error: ' + e.error, 'error');
         fullStopRecording();
     };
-    r.onend = () => { if (isRecording) try { r.start(); } catch(x) { fullStopRecording(); } };
+    r.onend = () => {
+        // On mobile: don't auto-restart (prevents duplicate stacking)
+        if (isRecording && !isMobile) {
+            try { r.start(); } catch(x) { fullStopRecording(); }
+        } else if (isRecording && isMobile) {
+            fullStopRecording();
+        }
+    };
     return r;
 }
 
