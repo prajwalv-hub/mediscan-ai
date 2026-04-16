@@ -62,6 +62,35 @@ body.high-contrast {
     --glass-border: rgba(255, 255, 255, 0.3);
 }
 
+body.high-contrast .mobile-nav {
+    background: rgba(0, 0, 0, 0.98);
+    border-top: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+body.high-contrast .mobile-nav-item {
+    color: #e0e0e0;
+}
+
+body.high-contrast .mobile-nav-item.active {
+    color: #ffffff;
+    text-shadow: 0 0 8px var(--accent-primary);
+}
+
+body.high-contrast .mobile-menu-btn {
+    background: #000;
+    border-color: rgba(255,255,255,0.5);
+    color: #fff;
+}
+
+body.high-contrast .mobile-menu-panel {
+    background: #0a0a0a;
+    border-color: rgba(255,255,255,0.4);
+}
+
+body.high-contrast .mobile-menu-item {
+    color: #e0e0e0;
+}
+
 /* Large Text Mode */
 body.large-text {
     font-size: 120%;
@@ -1338,13 +1367,52 @@ h1, h2, h3, h4 {
    Chat — Mobile Fix (tighter layout)
    ================================================ */
 @media (max-width: 768px) {
+    #page-chat {
+        padding: 10px 10px 70px 10px;
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 60px);
+    }
+    
+    #page-chat .page-header {
+        padding-bottom: 8px;
+        flex-shrink: 0;
+    }
+    
+    #page-chat .page-title {
+        font-size: 1.2rem;
+    }
+    
+    #page-chat .page-subtitle {
+        font-size: 0.78rem;
+        margin-bottom: 0;
+    }
+    
     .chat-container {
-        height: calc(100vh - 180px);
+        flex: 1;
+        height: auto;
+        max-height: none;
         border-radius: var(--radius-md);
+        min-height: 0;
+    }
+    
+    .chat-messages {
+        padding: 12px;
+        gap: 10px;
     }
     
     .chat-input-area {
         padding: 8px 10px;
         padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+    
+    .chat-suggestions {
+        gap: 6px;
+        margin-bottom: 6px;
+    }
+    
+    .suggestion-btn {
+        padding: 5px 10px;
+        font-size: 0.72rem;
     }
 }
