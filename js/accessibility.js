@@ -6,45 +6,12 @@ let ttsEnabled = false;
 let highContrastEnabled = false;
 let largeTextEnabled = false;
 
-// ==================== TEXT-TO-SPEECH ====================
-
-function speakText(text) {
-    if (!('speechSynthesis' in window)) {
-        showToast('Text-to-Speech not supported in this browser', 'error');
-        return;
-    }
-
-    // Stop any current speech
-    window.speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    // Set language based on current selection
-    const langConfig = CONFIG.LANGUAGES[CONFIG.currentLanguage];
-    if (langConfig) {
-        utterance.lang = langConfig.speechCode;
-    }
-
-    utterance.rate = 0.9;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-
-    utterance.onstart = () => {
-        showToast('🔊 Reading aloud...', 'info');
-    };
-
-    utterance.onerror = (e) => {
-        console.error('TTS error:', e);
-    };
-
-    window.speechSynthesis.speak(utterance);
-}
+// ==================== TEXT-TO-SPEECH TOGGLE ====================
+// Actual speakText() is in voice.js — this just toggles auto-read
 
 function speakResults() {
     if (!lastDiagnosis) return;
-    const text = lastDiagnosis.patientFriendlyExplanation || 
-        `Diagnosis: ${lastDiagnosis.condition || 'Unknown'}. Confidence: ${lastDiagnosis.confidence || 0} percent. Severity: ${lastDiagnosis.severity || 'Unknown'}. ${lastDiagnosis.recommendations?.[0] || ''}`;
-    speakText(text);
+    speakSymptomResults();
 }
 
 function toggleTTS() {
@@ -53,10 +20,11 @@ function toggleTTS() {
     btn.classList.toggle('active', ttsEnabled);
 
     if (ttsEnabled) {
-        showToast('🔊 Text-to-Speech enabled — results will be read aloud', 'success');
+        showToast('🔊 Auto-read enabled — results will be spoken aloud in your language', 'success');
     } else {
-        window.speechSynthesis.cancel();
-        showToast('🔇 Text-to-Speech disabled', 'info');
+        // Stop any playing audio
+        if (typeof stopSpeaking === 'function') stopSpeaking();
+        showToast('🔇 Auto-read disabled', 'info');
     }
 }
 

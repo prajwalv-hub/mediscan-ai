@@ -1,0 +1,11 @@
+{
+    "name": "mediscan-ai",
+    "version": "1.0.0",
+    "description": "AI-Powered Medical Diagnostic Platform",
+    "scripts": {
+        "dev": "vercel dev",
+        "deploy": "vercel --prod"
+    },
+    "dependencies": {},
+    "devDependencies": {}
+}

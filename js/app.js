@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initApp() {
-    // Show loading screen
     const loadingFill = document.getElementById('loadingBarFill');
     let progress = 0;
     const loadingInterval = setInterval(() => {
@@ -28,8 +27,11 @@ function initApp() {
             clearInterval(loadingInterval);
             setTimeout(() => {
                 document.getElementById('loadingScreen').classList.add('hidden');
-                // Check if API key exists
-                if (!CONFIG.API_KEY) {
+                if (CONFIG.isDeployed) {
+                    // On Vercel: API key is on server, skip to disclaimer
+                    document.getElementById('disclaimerModal').style.display = 'flex';
+                } else if (!CONFIG.API_KEY) {
+                    // Local: need API key from user
                     document.getElementById('apiKeyModal').style.display = 'flex';
                 } else {
                     document.getElementById('disclaimerModal').style.display = 'flex';
@@ -38,25 +40,23 @@ function initApp() {
         }
     }, 200);
 
-    // Setup drag and drop
     setupDragAndDrop('uploadArea', 'imageInput');
     setupDragAndDrop('reportUploadArea', 'reportInput');
-
-    // Load history stats
     updateHomeStats();
-
-    // Load recent activity
     loadRecentActivity();
+
+    // Sync language dropdown with stored preference
+    const langDropdown = document.getElementById('languageSelect');
+    if (langDropdown) {
+        langDropdown.value = CONFIG.currentLanguage;
+    }
 }
 
 // ==================== API KEY & DISCLAIMER ====================
 
 function saveApiKey() {
     const key = document.getElementById('apiKeyInput').value.trim();
-    if (!key) {
-        showToast('Please enter your API key', 'error');
-        return;
-    }
+    if (!key) { showToast('Please enter your API key', 'error'); return; }
     localStorage.setItem('mediscan_api_key', key);
     CONFIG.API_KEY = key;
     document.getElementById('apiKeyModal').style.display = 'none';
@@ -224,7 +224,19 @@ function clearReport() {
 function changeLanguage(lang) {
     CONFIG.currentLanguage = lang;
     localStorage.setItem('mediscan_lang', lang);
-    showToast(`Language changed to ${CONFIG.LANGUAGES[lang].name}`, 'info');
+    const langName = CONFIG.LANGUAGES[lang]?.name || 'English';
+    showToast('🌍 Language: ' + langName + ' — AI will now respond in ' + langName, 'success');
+
+    // Stop voice/TTS if active
+    if (typeof isRecording !== 'undefined' && isRecording) fullStopRecording();
+    if (typeof stopSpeaking === 'function') stopSpeaking();
+
+    // Clear previous diagnosis so next analysis uses the new language
+    lastDiagnosis = null;
+
+    // Update the dropdown to match
+    const dropdown = document.getElementById('languageSelect');
+    if (dropdown) dropdown.value = lang;
 }
 
 // ==================== UTILITY FUNCTIONS ====================

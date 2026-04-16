@@ -1,93 +1,203 @@
 // ================================================
 // MediScan AI — Blood Bank / Donor Network
+// Features: Live GPS location, interactive map, donor registration
 // ================================================
 
 let donorMap = null;
 let donorMarkers = [];
 let allDonors = [];
+let userLocationMarker = null;
+let userAccuracyCircle = null;
+let locationWatchId = null;
 
-// Sample donor data (for demo — in production this would be a database)
-const SAMPLE_DONORS = [
-    { name: "Rahul Sharma", blood: "A+", phone: "+91 98765 43210", lat: 17.3850, lng: 78.4867, distance: "0.8 km" },
-    { name: "Priya Reddy", blood: "O+", phone: "+91 98765 43211", lat: 17.3900, lng: 78.4900, distance: "1.2 km" },
-    { name: "Amit Kumar", blood: "B+", phone: "+91 98765 43212", lat: 17.3780, lng: 78.4950, distance: "1.5 km" },
-    { name: "Sneha Patel", blood: "AB+", phone: "+91 98765 43213", lat: 17.3920, lng: 78.4800, distance: "1.8 km" },
-    { name: "Vikram Singh", blood: "O-", phone: "+91 98765 43214", lat: 17.3750, lng: 78.4820, distance: "2.1 km" },
-    { name: "Ananya Rao", blood: "A-", phone: "+91 98765 43215", lat: 17.3960, lng: 78.4750, distance: "2.4 km" },
-    { name: "Karthik Nair", blood: "B-", phone: "+91 98765 43216", lat: 17.3700, lng: 78.4900, distance: "2.8 km" },
-    { name: "Meera Joshi", blood: "O+", phone: "+91 98765 43217", lat: 17.3880, lng: 78.5000, distance: "3.0 km" },
-    { name: "Suresh Reddy", blood: "A+", phone: "+91 98765 43218", lat: 17.4000, lng: 78.4850, distance: "3.2 km" },
-    { name: "Lakshmi Devi", blood: "B+", phone: "+91 98765 43219", lat: 17.3650, lng: 78.4780, distance: "3.5 km" },
-    { name: "Ravi Teja", blood: "AB-", phone: "+91 98765 43220", lat: 17.3820, lng: 78.5050, distance: "3.8 km" },
-    { name: "Divya Kumari", blood: "O+", phone: "+91 98765 43221", lat: 17.4050, lng: 78.4700, distance: "4.0 km" },
-    { name: "Arun Prasad", blood: "A+", phone: "+91 98765 43222", lat: 17.3580, lng: 78.4900, distance: "4.2 km" },
-    { name: "Pooja Sharma", blood: "B-", phone: "+91 98765 43223", lat: 17.3950, lng: 78.5100, distance: "4.5 km" },
-    { name: "Manoj Kumar", blood: "O-", phone: "+91 98765 43224", lat: 17.3500, lng: 78.4850, distance: "4.8 km" },
-    { name: "Kavitha Rani", blood: "AB+", phone: "+91 98765 43225", lat: 17.4100, lng: 78.4950, distance: "5.0 km" },
-    { name: "Venkat Rao", blood: "A-", phone: "+91 98765 43226", lat: 17.3620, lng: 78.4650, distance: "5.2 km" },
-    { name: "Swathi Nair", blood: "B+", phone: "+91 98765 43227", lat: 17.4020, lng: 78.5050, distance: "5.5 km" },
-    { name: "Ganesh Reddy", blood: "O+", phone: "+91 98765 43228", lat: 17.3450, lng: 78.4750, distance: "5.8 km" },
-    { name: "Bhavani Sri", blood: "A+", phone: "+91 98765 43229", lat: 17.4150, lng: 78.4800, distance: "6.0 km" },
-    { name: "Rajesh Khanna", blood: "B+", phone: "+91 98765 43230", lat: 17.3550, lng: 78.5000, distance: "6.2 km" },
-    { name: "Sanjay Gupta", blood: "O-", phone: "+91 98765 43231", lat: 17.4080, lng: 78.4680, distance: "6.5 km" },
-    { name: "Neha Agarwal", blood: "AB+", phone: "+91 98765 43232", lat: 17.3720, lng: 78.5120, distance: "6.8 km" },
-    { name: "Deepak Verma", blood: "A-", phone: "+91 98765 43233", lat: 17.4200, lng: 78.4920, distance: "7.0 km" }
+// Generate sample donors around any location (for demo purposes)
+const DONOR_NAMES = [
+    "Rahul Sharma", "Priya Reddy", "Amit Kumar", "Sneha Patel", "Vikram Singh",
+    "Ananya Rao", "Karthik Nair", "Meera Joshi", "Suresh Reddy", "Lakshmi Devi",
+    "Ravi Teja", "Divya Kumari", "Arun Prasad", "Pooja Sharma", "Manoj Kumar",
+    "Kavitha Rani", "Venkat Rao", "Swathi Nair", "Ganesh Reddy", "Bhavani Sri",
+    "Rajesh Khanna", "Sanjay Gupta", "Neha Agarwal", "Deepak Verma"
 ];
+const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+function generateDonorsNearLocation(lat, lng) {
+    return DONOR_NAMES.map((name, i) => {
+        const angle = (i / DONOR_NAMES.length) * Math.PI * 2;
+        const radius = 0.005 + Math.random() * 0.03; // 0.5km to 3km spread
+        const dLat = lat + Math.cos(angle) * radius + (Math.random() - 0.5) * 0.01;
+        const dLng = lng + Math.sin(angle) * radius + (Math.random() - 0.5) * 0.01;
+        const dist = (radius * 111).toFixed(1); // rough km conversion
+        return {
+            name,
+            blood: BLOOD_GROUPS[i % BLOOD_GROUPS.length],
+            phone: `+91 98765 ${43210 + i}`,
+            lat: dLat,
+            lng: dLng,
+            distance: dist + ' km'
+        };
+    });
+}
 
 function initBloodBankMap() {
-    // Add custom registered donors from localStorage
     const registeredDonors = JSON.parse(localStorage.getItem('mediscan_donors') || '[]');
-    allDonors = [...SAMPLE_DONORS, ...registeredDonors];
-
-    // Update donor count on home
-    document.getElementById('donorCount').textContent = allDonors.length;
 
     if (donorMap) {
-        donorMap.invalidateSize();
-        return;
+        // Stop any previous location watch
+        if (locationWatchId) {
+            navigator.geolocation.clearWatch(locationWatchId);
+            locationWatchId = null;
+        }
+        donorMap.remove();
+        donorMap = null;
+        userLocationMarker = null;
+        userAccuracyCircle = null;
     }
 
-    // Try to get user location, fallback to Hyderabad
+    showToast('📍 Getting your live location...', 'info');
+
     if (navigator.geolocation) {
+        // First, get current position quickly
         navigator.geolocation.getCurrentPosition(
             (pos) => {
-                createMap(pos.coords.latitude, pos.coords.longitude);
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                const accuracy = pos.coords.accuracy;
+                console.log(`📍 Location: ${lat}, ${lng} (accuracy: ${accuracy}m)`);
+                showToast(`📍 Location found! Accuracy: ${Math.round(accuracy)}m`, 'success');
+
+                allDonors = [...generateDonorsNearLocation(lat, lng), ...registeredDonors];
+                document.getElementById('donorCount').textContent = allDonors.length;
+                createMap(lat, lng, accuracy);
+                renderDonorList(allDonors);
+
+                // Start watching for live location updates
+                startLocationWatch();
             },
-            () => {
-                // Fallback to Hyderabad center
-                createMap(17.3850, 78.4867);
+            (err) => {
+                console.warn('Geolocation error:', err.message);
+                let msg = 'Location access denied.';
+                if (err.code === 1) msg = '📍 Location blocked! Please allow location in browser settings.';
+                else if (err.code === 2) msg = '📍 Location unavailable. Using default location.';
+                else if (err.code === 3) msg = '📍 Location timed out. Using default location.';
+                showToast(msg, 'warning');
+
+                // Fallback to Hyderabad
+                allDonors = [...generateDonorsNearLocation(17.3850, 78.4867), ...registeredDonors];
+                document.getElementById('donorCount').textContent = allDonors.length;
+                createMap(17.3850, 78.4867, 5000);
+                renderDonorList(allDonors);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 30000
             }
         );
     } else {
-        createMap(17.3850, 78.4867);
+        showToast('Geolocation not supported', 'error');
+        allDonors = [...generateDonorsNearLocation(17.3850, 78.4867), ...registeredDonors];
+        document.getElementById('donorCount').textContent = allDonors.length;
+        createMap(17.3850, 78.4867, 5000);
+        renderDonorList(allDonors);
     }
-
-    // Populate donor list
-    renderDonorList(allDonors);
 }
 
-function createMap(lat, lng) {
+function startLocationWatch() {
+    if (!navigator.geolocation) return;
+
+    locationWatchId = navigator.geolocation.watchPosition(
+        (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            const accuracy = pos.coords.accuracy;
+            console.log(`📍 Live update: ${lat.toFixed(5)}, ${lng.toFixed(5)} (${Math.round(accuracy)}m)`);
+
+            updateUserLocation(lat, lng, accuracy);
+        },
+        (err) => {
+            console.warn('Watch position error:', err.message);
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 5000
+        }
+    );
+}
+
+function updateUserLocation(lat, lng, accuracy) {
+    if (!donorMap) return;
+
+    // Update user marker position
+    if (userLocationMarker) {
+        userLocationMarker.setLatLng([lat, lng]);
+    }
+
+    // Update accuracy circle
+    if (userAccuracyCircle) {
+        userAccuracyCircle.setLatLng([lat, lng]);
+        userAccuracyCircle.setRadius(accuracy);
+    }
+}
+
+function createMap(lat, lng, accuracy) {
     donorMap = L.map('donorMap', {
         zoomControl: true,
         attributionControl: false
-    }).setView([lat, lng], 13);
+    }).setView([lat, lng], 14);
 
-    // Dark theme map tiles
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19
+    // OpenStreetMap tiles — works directly from localhost
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(donorMap);
 
-    // Add user location marker
+    // Accuracy circle (shows GPS accuracy)
+    userAccuracyCircle = L.circle([lat, lng], {
+        radius: accuracy || 100,
+        color: '#06b6d4',
+        fillColor: '#06b6d4',
+        fillOpacity: 0.08,
+        weight: 1,
+        opacity: 0.3
+    }).addTo(donorMap);
+
+    // User location marker with pulsing animation
     const userIcon = L.divIcon({
-        html: '<div style="background: #06b6d4; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(6,182,212,0.5);"></div>',
-        className: 'user-marker',
-        iconSize: [16, 16]
+        html: `<div class="live-location-marker">
+            <div class="live-pulse-ring"></div>
+            <div class="live-pulse-ring" style="animation-delay: 0.5s;"></div>
+            <div class="live-dot"></div>
+        </div>`,
+        className: 'user-marker-container',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
     });
-    L.marker([lat, lng], { icon: userIcon }).addTo(donorMap)
-        .bindPopup('<strong>📍 Your Location</strong>');
+    userLocationMarker = L.marker([lat, lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(donorMap)
+        .bindPopup(`<strong>📍 Your Live Location</strong><br><small>Accuracy: ~${Math.round(accuracy || 100)}m</small>`);
 
     // Add donor markers
     addDonorMarkers(allDonors);
+
+    // Re-center button
+    addRecenterButton(lat, lng);
+}
+
+function addRecenterButton(lat, lng) {
+    const recenterBtn = L.control({ position: 'bottomright' });
+    recenterBtn.onAdd = function() {
+        const div = L.DomUtil.create('div', 'leaflet-bar');
+        div.innerHTML = `<a href="#" title="Re-center on my location" style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;background:white;font-size:18px;text-decoration:none;" onclick="event.preventDefault();recenterMap()">📍</a>`;
+        return div;
+    };
+    recenterBtn.addTo(donorMap);
+}
+
+function recenterMap() {
+    if (userLocationMarker && donorMap) {
+        donorMap.setView(userLocationMarker.getLatLng(), 14, { animate: true });
+        showToast('📍 Re-centered on your location', 'info');
+    }
 }
 
 function addDonorMarkers(donors) {
@@ -181,6 +291,7 @@ function registerDonor() {
 
     // Get approximate location
     if (navigator.geolocation) {
+        showToast('📍 Getting your location for registration...', 'info');
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 // Add small random offset for privacy (approximate location)
@@ -209,7 +320,8 @@ function registerDonor() {
             },
             () => {
                 showToast('Could not get your location. Please allow location access.', 'error');
-            }
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
         );
     } else {
         showToast('Location not supported in this browser', 'error');

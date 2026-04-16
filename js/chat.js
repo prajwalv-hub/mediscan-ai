@@ -58,6 +58,11 @@ async function sendChatMessage() {
         chatHistory.push({ role: 'model', content: response });
         addChatBubble(response, 'ai');
 
+        // Auto-read AI response if TTS is enabled
+        if (typeof ttsEnabled !== 'undefined' && ttsEnabled) {
+            setTimeout(() => speakText(response), 500);
+        }
+
     } catch (error) {
         removeTypingIndicator(typingId);
         console.error('Chat error:', error);

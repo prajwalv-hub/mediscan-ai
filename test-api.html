@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head><title>API Test</title>
+<style>
+    body { font-family: monospace; background: #111; color: #0f0; padding: 20px; }
+    pre { white-space: pre-wrap; }
+    input { padding: 10px; width: 400px; font-size: 16px; }
+    button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #0f0; color: #000; border: none; }
+    .ok { color: #0f0; }
+    .fail { color: #f00; }
+    .testing { color: #ff0; }
+</style>
+</head>
+<body>
+<h1>🔧 Gemini API Model Tester</h1>
+<p>Enter your API key:</p>
+<input type="text" id="key" placeholder="Paste API key here">
+<button onclick="testAll()">TEST ALL MODELS</button>
+<hr>
+<div id="output"></div>
+
+<script>
+async function testAll() {
+    const key = document.getElementById('key').value.trim();
+    if (!key) { alert('Enter API key!'); return; }
+    const out = document.getElementById('output');
+    
+    // First, list available models
+    out.innerHTML = '<p class="testing">📋 Listing available models...</p>';
+    
+    try {
+        const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+        const listData = await listRes.json();
+        if (listData.models) {
+            out.innerHTML += `<p class="ok">Found ${listData.models.length} models:</p>`;
+            const genModels = listData.models.filter(m => 
+                m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent')
+            );
+            genModels.forEach(m => {
+                out.innerHTML += `<p>  ✅ ${m.name} (${m.displayName})</p>`;
+            });
+            out.innerHTML += '<hr>';
+            
+            // Now test each generateContent-capable model
+            for (const m of genModels.slice(0, 8)) {
+                const modelName = m.name; // e.g., "models/gemini-2.0-flash"
+                out.innerHTML += `<p class="testing">🧪 Testing ${modelName}...</p>`;
+                
+                try {
+                    const res = await fetch(
+                        `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${key}`,
+                        {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{ parts: [{ text: 'Say "hello" in one word' }] }],
+                                generationConfig: { maxOutputTokens: 10 }
+                            })
+                        }
+                    );
+                    const data = await res.json();
+                    if (res.ok) {
+                        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'OK';
+                        out.innerHTML += `<p class="ok">  ✅ ${modelName} WORKS! Reply: "${reply}"</p>`;
+                        out.innerHTML += `<p class="ok" style="font-size:20px; background:#030; padding:10px;">
+                            🎉 USE THIS MODEL: ${modelName.replace('models/', '')}<br>
+                            API VERSION: v1beta
+                        </p>`;
+                    } else {
+                        out.innerHTML += `<p class="fail">  ❌ ${modelName}: ${data.error?.message?.substring(0, 100)}</p>`;
+                    }
+                } catch (e) {
+                    out.innerHTML += `<p class="fail">  ❌ ${modelName}: ${e.message}</p>`;
+                }
+            }
+        } else {
+            out.innerHTML += `<p class="fail">Error listing models: ${JSON.stringify(listData.error)}</p>`;
+        }
+    } catch (e) {
+        out.innerHTML += `<p class="fail">Network error: ${e.message}</p>`;
+    }
+    
+    out.innerHTML += '<hr><p>Testing complete!</p>';
+}
+</script>
+</body>
+</html>

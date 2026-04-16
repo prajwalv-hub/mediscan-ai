@@ -34,32 +34,21 @@ async function analyzeSymptoms() {
 
     const prompt = `The patient reports these symptoms: "${symptoms}"
 
-Analyze and provide your assessment. Respond in ${langName}.
+Analyze these symptoms. Respond ONLY with a raw JSON object (no markdown, no code blocks, no extra text).
 
-Provide your analysis in this exact JSON format:
-{
-    "disclaimer": "This is an AI-assisted preliminary screening and should NOT replace professional medical diagnosis.",
-    "conditions": [
-        {"name": "Most likely condition", "likelihood": 65, "description": "Brief description"},
-        {"name": "Second possibility", "likelihood": 20, "description": "Brief description"},
-        {"name": "Third possibility", "likelihood": 10, "description": "Brief description"}
-    ],
-    "severity": "Low|Moderate|High|Critical",
-    "healthScore": 40,
-    "questions": ["Question a doctor would ask 1", "Question 2"],
-    "redFlags": ["Warning sign to watch for"],
-    "recommendations": ["What to do step 1", "Step 2", "Step 3"],
-    "urgency": "routine|soon|urgent|emergency",
-    "patientFriendlyExplanation": "Simple, empathetic explanation in ${langName}"
-}
+IMPORTANT: ALL text values in the JSON MUST be written in ${langName} language. Do NOT use English if the language is ${langName}.
 
-IMPORTANT: Return ONLY valid JSON, no extra text.`;
+The JSON must follow this exact structure:
+{"disclaimer":"AI screening only - not a diagnosis","conditions":[{"name":"Condition name in ${langName}","likelihood":65,"description":"Brief description in ${langName}"},{"name":"Second possibility in ${langName}","likelihood":20,"description":"Brief description in ${langName}"},{"name":"Third possibility in ${langName}","likelihood":10,"description":"Brief description in ${langName}"}],"severity":"Low","healthScore":40,"redFlags":["Warning sign in ${langName}"],"recommendations":["Step 1 in ${langName}","Step 2 in ${langName}","Step 3 in ${langName}"],"patientFriendlyExplanation":"Simple explanation in ${langName}"}
+
+Rules: ALL text must be in ${langName}. Output ONLY the JSON. No thinking. No explanation. No markdown.`;
 
     try {
         const response = await GeminiAPI.sendText(prompt);
-        const result = GeminiAPI.parseJSON(response);
+        console.log('Raw API response:', response.substring(0, 200));
+        let result = GeminiAPI.parseJSON(response);
 
-        if (result) {
+        if (result && result.conditions) {
             displaySymptomResults(result);
             saveScanToHistory({
                 type: 'symptom',
@@ -71,7 +60,8 @@ IMPORTANT: Return ONLY valid JSON, no extra text.`;
             });
             lastDiagnosis = result;
         } else {
-            displayRawSymptomResults(response);
+            // If JSON parse failed, display a formatted version of the text
+            displayFormattedSymptomResults(response);
         }
     } catch (error) {
         console.error('Symptom analysis error:', error);
@@ -118,24 +108,120 @@ function displaySymptomResults(result) {
 
     container.scrollIntoView({ behavior: 'smooth' });
     showToast('Symptom analysis complete!', 'success');
+
+    // Auto-read results aloud if TTS toggle is enabled
+    if (typeof ttsEnabled !== 'undefined' && ttsEnabled) {
+        setTimeout(() => speakSymptomResults(), 800);
+    }
 }
 
-function displayRawSymptomResults(text) {
+function displayFormattedSymptomResults(text) {
     const container = document.getElementById('symptomsResults');
     container.style.display = 'block';
+    
+    // Aggressively clean the response
+    let cleaned = text
+        .replace(/<think>[\s\S]*?<\/think>/gi, '')
+        .replace(/```json\s*/gi, '').replace(/```/g, '')
+        .replace(/^json\s*/i, '')
+        .trim();
+    
+    // Try to extract and parse JSON
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+        try {
+            let jsonStr = cleaned.substring(firstBrace, lastBrace + 1);
+            jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1').replace(/\n/g, ' ');
+            const parsed = JSON.parse(jsonStr);
+            if (parsed && parsed.conditions) {
+                displaySymptomResults(parsed);
+                lastDiagnosis = parsed;
+                return;
+            }
+        } catch {}
+    }
+
+    // Try the standard parser one more time
+    const lastTry = GeminiAPI.parseJSON(cleaned);
+    if (lastTry && lastTry.conditions) {
+        displaySymptomResults(lastTry);
+        lastDiagnosis = lastTry;
+        return;
+    }
+    
+    // Final fallback: strip JSON artifacts and show clean text
+    let formatted = cleaned
+        .replace(/[{}"[\]]/g, '')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+    
     document.getElementById('conditionsList').innerHTML = `
         <div class="condition-card">
-            <p class="condition-desc">${text}</p>
+            <div class="condition-header">
+                <span class="condition-name">AI Analysis</span>
+            </div>
+            <p class="condition-desc" style="line-height:1.8;">${formatted}</p>
         </div>
     `;
-    document.getElementById('symptomRecsList').innerHTML = '<li>Please consult a healthcare professional.</li>';
+    document.getElementById('symptomRecsList').innerHTML = '<li>Please consult a healthcare professional for proper diagnosis.</li>';
+    document.getElementById('redFlagsCard').style.display = 'none';
     container.scrollIntoView({ behavior: 'smooth' });
+    showToast('Analysis complete!', 'success');
 }
 
 function speakSymptomResults() {
-    if (!lastDiagnosis) return;
-    const text = lastDiagnosis.patientFriendlyExplanation || 
-        `Analysis shows possible ${lastDiagnosis.conditions?.[0]?.name}. ${lastDiagnosis.recommendations?.[0] || ''}`;
+    if (!lastDiagnosis) {
+        showToast('No results to read', 'warning');
+        return;
+    }
+
+    // Priority: use patientFriendlyExplanation if available (it's in the user's language)
+    if (lastDiagnosis.patientFriendlyExplanation) {
+        let text = lastDiagnosis.patientFriendlyExplanation;
+
+        // Append conditions and recommendations in the response language
+        if (lastDiagnosis.conditions && lastDiagnosis.conditions.length > 0) {
+            lastDiagnosis.conditions.forEach((c, i) => {
+                text += '. ' + c.name + ', ' + c.likelihood + '%. ' + (c.description || '');
+            });
+        }
+
+        if (lastDiagnosis.recommendations && lastDiagnosis.recommendations.length > 0) {
+            lastDiagnosis.recommendations.forEach(r => {
+                text += '. ' + r;
+            });
+        }
+
+        speakText(text);
+        return;
+    }
+
+    // Fallback: build speech from structured data
+    let text = '';
+
+    if (lastDiagnosis.conditions && lastDiagnosis.conditions.length > 0) {
+        lastDiagnosis.conditions.forEach((c, i) => {
+            text += c.name + ', ' + c.likelihood + '%. ' + (c.description || '') + '. ';
+        });
+    }
+
+    if (lastDiagnosis.recommendations && lastDiagnosis.recommendations.length > 0) {
+        lastDiagnosis.recommendations.forEach(r => {
+            text += r + '. ';
+        });
+    }
+
+    if (lastDiagnosis.redFlags && lastDiagnosis.redFlags.length > 0) {
+        lastDiagnosis.redFlags.forEach(f => {
+            text += f + '. ';
+        });
+    }
+
+    if (!text) {
+        text = 'Analysis complete. Please consult a doctor for proper diagnosis.';
+    }
+
     speakText(text);
 }
 

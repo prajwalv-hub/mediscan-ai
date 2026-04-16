@@ -154,6 +154,15 @@ function displayScanResults(result, hasSymptoms) {
     // Scroll to results
     container.scrollIntoView({ behavior: 'smooth' });
     showToast('Analysis complete!', 'success');
+
+    // Auto-read results if TTS is enabled
+    if (typeof ttsEnabled !== 'undefined' && ttsEnabled) {
+        setTimeout(() => {
+            const text = result.patientFriendlyExplanation ||
+                (result.condition + '. ' + (result.observations || []).join('. ') + '. ' + (result.recommendations || []).join('. '));
+            speakText(text);
+        }, 800);
+    }
 }
 
 function updateGauge(score) {
