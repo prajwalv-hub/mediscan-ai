@@ -1318,6 +1318,28 @@ h1, h2, h3, h4 {
     margin: 4px 8px;
 }
 
+.mobile-lang-select {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-family: 'Inter', sans-serif;
+    padding: 6px 8px;
+    outline: none;
+    cursor: pointer;
+}
+
+.mobile-lang-select:focus {
+    border-color: var(--accent-primary);
+}
+
+.mobile-lang-select option {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
 /* Show hamburger only on mobile */
 @media (max-width: 768px) {
     .mobile-menu-btn {

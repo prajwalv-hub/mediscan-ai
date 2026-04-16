@@ -1318,3 +1318,102 @@
     font-weight: 800;
     color: var(--accent-primary);
 }
+
+/* ================================================
+   MOBILE OVERRIDES (must be at end of this file)
+   ================================================ */
+@media (max-width: 768px) {
+    /* --- Blood Bank: force single column --- */
+    .bloodbank-layout {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+    
+    .map-section {
+        grid-column: auto !important;
+        grid-row: auto !important;
+        order: 1;
+    }
+    
+    .donor-list-section {
+        grid-column: auto !important;
+        order: 3;
+    }
+    
+    .donor-map {
+        height: 250px !important;
+    }
+    
+    .map-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .blood-group-btns {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 6px;
+    }
+    
+    .blood-btn {
+        text-align: center;
+        padding: 8px 4px;
+    }
+    
+    /* --- Chat: fill screen properly --- */
+    .chat-container {
+        height: auto !important;
+        max-height: none !important;
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .chat-messages {
+        flex: 1;
+        padding: 12px;
+        gap: 10px;
+        min-height: 0;
+        overflow-y: auto;
+    }
+    
+    .chat-bubble {
+        max-width: 92%;
+    }
+    
+    .chat-avatar {
+        width: 30px;
+        height: 30px;
+    }
+    
+    .chat-content {
+        padding: 10px 14px;
+    }
+    
+    .chat-input-area {
+        padding: 8px 10px;
+        flex-shrink: 0;
+    }
+    
+    .chat-suggestions {
+        gap: 6px;
+        margin-bottom: 6px;
+    }
+    
+    .suggestion-btn {
+        padding: 5px 10px;
+        font-size: 0.72rem;
+    }
+    
+    .send-btn {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .chat-input {
+        padding: 10px 14px;
+        font-size: 0.85rem;
+    }
+}
