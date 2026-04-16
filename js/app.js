@@ -2,6 +2,21 @@
 // MediScan AI — Main App Logic
 // ================================================
 
+// Mobile menu toggle
+function toggleMobileMenu() {
+    const panel = document.getElementById('mobileMenuPanel');
+    if (panel) panel.classList.toggle('open');
+}
+
+// Close mobile menu when tapping outside
+document.addEventListener('click', (e) => {
+    const panel = document.getElementById('mobileMenuPanel');
+    const btn = document.getElementById('mobileMenuBtn');
+    if (panel && panel.classList.contains('open') && !panel.contains(e.target) && !btn.contains(e.target)) {
+        panel.classList.remove('open');
+    }
+});
+
 // State
 let currentPage = 'home';
 let currentImageData = null;

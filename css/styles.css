@@ -1221,3 +1221,130 @@ h1, h2, h3, h4 {
         height: 140px;
     }
 }
+
+/* ================================================
+   Mobile Hamburger Menu
+   ================================================ */
+.mobile-menu-btn {
+    display: none; /* Hidden on desktop */
+    position: fixed;
+    top: 12px;
+    right: 14px;
+    z-index: 3000;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid var(--glass-border);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    backdrop-filter: blur(10px);
+}
+
+.mobile-menu-panel {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 62px;
+    right: 14px;
+    z-index: 2999;
+    width: 200px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 8px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    backdrop-filter: blur(16px);
+    animation: fadeInUp 0.2s ease;
+}
+
+.mobile-menu-panel.open {
+    display: block;
+}
+
+.mobile-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 14px;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.mobile-menu-item:hover,
+.mobile-menu-item:active {
+    background: rgba(var(--accent-primary-rgb), 0.08);
+    color: var(--text-primary);
+}
+
+.mobile-menu-divider {
+    height: 1px;
+    background: var(--glass-border);
+    margin: 4px 8px;
+}
+
+/* Show hamburger only on mobile */
+@media (max-width: 768px) {
+    .mobile-menu-btn {
+        display: flex;
+    }
+}
+
+/* ================================================
+   Blood Bank — Mobile Fix (Override)
+   ================================================ */
+@media (max-width: 768px) {
+    .bloodbank-layout {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px;
+    }
+    
+    .map-section {
+        order: 1;
+    }
+    
+    .donor-list-section {
+        order: 3;
+    }
+    
+    .donor-registration {
+        order: 2;
+    }
+    
+    .donor-map {
+        height: 260px;
+    }
+    
+    .blood-group-btns {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+    }
+    
+    .blood-btn {
+        text-align: center;
+        padding: 8px 4px;
+    }
+}
+
+/* ================================================
+   Chat — Mobile Fix (tighter layout)
+   ================================================ */
+@media (max-width: 768px) {
+    .chat-container {
+        height: calc(100vh - 180px);
+        border-radius: var(--radius-md);
+    }
+    
+    .chat-input-area {
+        padding: 8px 10px;
+        padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+}
