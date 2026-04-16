@@ -19,43 +19,58 @@ function initSpeechRecognition() {
     // Mobile detection
     const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
     
-    // On mobile: non-continuous to prevent duplicate word stacking
-    // On desktop: continuous for a smooth experience
     r.continuous = !isMobile;
-    r.interimResults = !isMobile;
+    r.interimResults = true;
     r.maxAlternatives = 1;
     r.lang = CONFIG.LANGUAGES[CONFIG.currentLanguage]?.speechCode || 'en-US';
 
     // Track what was in the field before this session started
     let baseText = '';
+    let lastTranscript = '';
 
     r.onstart = () => {
         if (activeInputId) {
             const inp = document.getElementById(activeInputId);
             baseText = inp ? inp.value : '';
         }
+        lastTranscript = '';
     };
 
     r.onresult = (e) => {
-        let final = '', interim = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-            if (e.results[i].isFinal) final += e.results[i][0].transcript;
-            else interim += e.results[i][0].transcript;
-        }
-        const status = document.getElementById('voiceStatus');
-        if (interim && status) status.textContent = '"' + interim.substring(0, 50) + '..."';
-        if (final && activeInputId) {
-            const inp = document.getElementById(activeInputId);
-            if (inp) {
-                // On mobile: replace with base + new result (no stacking)
-                if (isMobile) {
-                    inp.value = (baseText ? baseText + ' ' : '') + final.trim();
-                } else {
-                    inp.value += (inp.value ? ' ' : '') + final;
-                }
-                gotResult = true;
+        if (isMobile) {
+            // MOBILE: Collect the FULL transcript from ALL results
+            // Android Chrome sends progressive results — always use the latest full text
+            let fullText = '';
+            for (let i = 0; i < e.results.length; i++) {
+                fullText += e.results[i][0].transcript;
             }
-            showToast('Got: "' + final.substring(0, 40) + '"', 'success');
+            fullText = fullText.trim();
+            lastTranscript = fullText;
+            
+            // Always replace the field with baseText + latest full transcript
+            if (activeInputId) {
+                const inp = document.getElementById(activeInputId);
+                if (inp) {
+                    inp.value = (baseText ? baseText + ' ' : '') + fullText;
+                    gotResult = true;
+                }
+            }
+            const status = document.getElementById('voiceStatus');
+            if (status) status.textContent = '"' + fullText.substring(0, 50) + (fullText.length > 50 ? '...' : '') + '"';
+        } else {
+            // DESKTOP: Original behavior (continuous append)
+            let final = '', interim = '';
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+                if (e.results[i].isFinal) final += e.results[i][0].transcript;
+                else interim += e.results[i][0].transcript;
+            }
+            const status = document.getElementById('voiceStatus');
+            if (interim && status) status.textContent = '"' + interim.substring(0, 50) + '..."';
+            if (final && activeInputId) {
+                const inp = document.getElementById(activeInputId);
+                if (inp) { inp.value += (inp.value ? ' ' : '') + final; gotResult = true; }
+                showToast('Got: "' + final.substring(0, 40) + '"', 'success');
+            }
         }
     };
     r.onerror = (e) => {
@@ -66,11 +81,12 @@ function initSpeechRecognition() {
         fullStopRecording();
     };
     r.onend = () => {
-        // On mobile: don't auto-restart (prevents duplicate stacking)
-        if (isRecording && !isMobile) {
-            try { r.start(); } catch(x) { fullStopRecording(); }
-        } else if (isRecording && isMobile) {
-            fullStopRecording();
+        if (isMobile) {
+            // Show final result toast only once
+            if (lastTranscript) showToast('Got: "' + lastTranscript.substring(0, 40) + '"', 'success');
+            if (isRecording) fullStopRecording();
+        } else {
+            if (isRecording) try { r.start(); } catch(x) { fullStopRecording(); }
         }
     };
     return r;
